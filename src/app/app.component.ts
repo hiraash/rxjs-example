@@ -2,8 +2,8 @@ import { Component, AfterViewInit } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { URLSearchParams, Jsonp } from '@angular/http';
 
-import { Observable, of } from 'rxjs';
-import { map, debounceTime, distinctUntilChanged, combineLatest, switchMap } from 'rxjs/operators';
+import { Observable, of, fromEvent } from 'rxjs';
+import {tap, map, debounceTime, distinctUntilChanged, combineLatest, switchMap, mapTo, startWith } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
@@ -11,25 +11,22 @@ import { map, debounceTime, distinctUntilChanged, combineLatest, switchMap } fro
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements AfterViewInit {
-  items: Observable<Array<string>>;
-  term = new FormControl();
-  limit = new FormControl();
+  items: Array<string>;
 
-  constructor( private jsonp: Jsonp) {
+  constructor( private jsonp: Jsonp) {}
+
+  ngAfterViewInit() {
     this.setupSearch();
   }
 
-  ngAfterViewInit() {
-    this.limit.setValue( 10 );
-  }
-
   setupSearch() {
-    this.items = this.term.valueChanges.pipe(
+    this.searchTextStream().pipe(
+      tap(value => console.log(value)),
       debounceTime(400),
       distinctUntilChanged(),
-      combineLatest( this.limit.valueChanges ),
+      combineLatest( this.searchLimitStream().pipe() ),
       switchMap(([term, limit]) =>  this.searchRequest( term, limit )),
-    )
+    ).subscribe( values => this.items = values );
   }
 
   searchRequest( term, limit ): Observable<Array<string>>{
@@ -47,6 +44,19 @@ export class AppComponent implements AfterViewInit {
     } else {
       return of([]);
     }
+  }
+
+  searchTextStream(){
+    const element = <HTMLInputElement>document.getElementById('searchText');
+    return fromEvent<KeyboardEvent>( element, 'keypress' ).pipe( map(e => element.value + e.key ));
+  }
+
+  searchLimitStream(){
+    const element = <HTMLInputElement>document.getElementById('resultLimit');
+    return fromEvent( element, 'change' ).pipe( 
+      map(() => element.value ),
+      startWith( 5 )
+    );
   }
 
 }
