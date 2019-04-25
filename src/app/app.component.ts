@@ -3,7 +3,7 @@ import { FormControl } from '@angular/forms';
 import { URLSearchParams, Jsonp } from '@angular/http';
 
 import { Observable, of, fromEvent } from 'rxjs';
-import {tap, map, debounceTime, distinctUntilChanged, combineLatest, switchMap, mapTo, startWith } from 'rxjs/operators';
+import { map, debounceTime, distinctUntilChanged, combineLatest, switchMap, mapTo, startWith } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
@@ -20,17 +20,21 @@ export class AppComponent implements AfterViewInit {
   }
 
   setupSearch() {
-    this.searchTextStream().pipe(
-      tap(value => console.log(value)),
+    this.eventStream('searchText', 'keyup').pipe(
       debounceTime(400),
       distinctUntilChanged(),
-      combineLatest( this.searchLimitStream().pipe() ),
-      switchMap(([term, limit]) =>  this.searchRequest( term, limit )),
+      combineLatest( this.eventStream('resultLimit', 'change').pipe( startWith( 5 ))),
+      switchMap(([term, limit]) =>  {
+        if ( term ) {
+          this.searchRequest( term, limit )
+        } else {
+          return of([]);
+        }
+      }),
     ).subscribe( values => this.items = values );
   }
 
   searchRequest( term, limit ): Observable<Array<string>>{
-    if ( term ) {
       console.log( `Searching Wikipedia for "${term}"` );
 
       const search = new URLSearchParams();
@@ -41,22 +45,11 @@ export class AppComponent implements AfterViewInit {
       return this.jsonp
           .get('http://en.wikipedia.org/w/api.php?callback=JSONP_CALLBACK', { search })
           .pipe( map(response => response.json()[1]));
-    } else {
-      return of([]);
-    }
   }
 
-  searchTextStream(){
-    const element = <HTMLInputElement>document.getElementById('searchText');
-    return fromEvent<KeyboardEvent>( element, 'keypress' ).pipe( map(e => element.value + e.key ));
-  }
-
-  searchLimitStream(){
-    const element = <HTMLInputElement>document.getElementById('resultLimit');
-    return fromEvent( element, 'change' ).pipe( 
-      map(() => element.value ),
-      startWith( 5 )
-    );
+  eventStream( id, eventName ){
+    const element = <HTMLInputElement>document.getElementById(id);
+    return fromEvent<KeyboardEvent>( element, eventName ).pipe( map(() => element.value ));
   }
 
 }
