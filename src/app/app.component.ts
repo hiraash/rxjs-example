@@ -1,9 +1,8 @@
 import { Component, AfterViewInit } from '@angular/core';
-import { FormControl } from '@angular/forms';
 import { URLSearchParams, Jsonp } from '@angular/http';
 
-import { Observable, of, fromEvent } from 'rxjs';
-import { map, debounceTime, distinctUntilChanged, combineLatest, switchMap, mapTo, startWith } from 'rxjs/operators';
+import { Observable, fromEvent } from 'rxjs';
+import { map, debounceTime, distinctUntilChanged, combineLatest, switchMap, startWith, filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
@@ -23,14 +22,9 @@ export class AppComponent implements AfterViewInit {
     this.eventStream('searchText', 'keyup').pipe(
       debounceTime(400),
       distinctUntilChanged(),
+      filter( term => !!term ),
       combineLatest( this.eventStream('resultLimit', 'change').pipe( startWith( 5 ))),
-      switchMap(([term, limit]) =>  {
-        if ( term ) {
-          this.searchRequest( term, limit )
-        } else {
-          return of([]);
-        }
-      }),
+      switchMap(([term, limit]) => this.searchRequest( term, limit )),
     ).subscribe( values => this.items = values );
   }
 
