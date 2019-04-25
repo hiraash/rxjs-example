@@ -1,8 +1,8 @@
 import { Component, AfterViewInit } from '@angular/core';
 import { URLSearchParams, Jsonp } from '@angular/http';
 
-import { Observable, fromEvent } from 'rxjs';
-import { map, debounceTime, distinctUntilChanged, combineLatest, switchMap, startWith, filter } from 'rxjs/operators';
+import { Observable } from 'rxjs';
+import { map, } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
@@ -12,20 +12,10 @@ import { map, debounceTime, distinctUntilChanged, combineLatest, switchMap, star
 export class AppComponent implements AfterViewInit {
   items: Array<string>;
 
-  constructor( private jsonp: Jsonp) {}
+  constructor( private jsonp: Jsonp ) {}
 
   ngAfterViewInit() {
-    this.setupSearch();
-  }
-
-  setupSearch() {
-    this.eventStream('searchText', 'keyup').pipe(
-      debounceTime(400),
-      distinctUntilChanged(),
-      filter( term => !!term ),
-      combineLatest( this.eventStream('resultLimit', 'change').pipe( startWith( 5 ))),
-      switchMap(([term, limit]) => this.searchRequest( term, limit )),
-    ).subscribe( values => this.items = values );
+    
   }
 
   searchRequest( term, limit ): Observable<Array<string>>{
@@ -42,8 +32,7 @@ export class AppComponent implements AfterViewInit {
   }
 
   eventStream( id, eventName ){
-    const element = <HTMLInputElement>document.getElementById(id);
-    return fromEvent<KeyboardEvent>( element, eventName ).pipe( map(() => element.value ));
+    
   }
 
 }
